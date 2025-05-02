@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{ data[7] }} - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<span>#</span>
+	{% for tag in data[6] %}
+	<span><a href="{{ tag[0] }}">{{ tag[1] }}</a></span>
+	<span>&nbsp;&nbsp;</span>
+	{% endfor %}
+	<p>{{ data[0]|safe }}</p>
+	<p><b>{{ data[1] }}</b></p>
+	{% for article in data[2] %}
+	<a href="{{ article[0] }}"><img style="float:left;object-fit:cover;;padding-right:20px;padding-bottom:1em;" src="{{ article[1] }}" alt="{{ article[2] }}" width=325px height=325px></a>
+	<div style="display:flex;justify-content:left;align-items:left;flex-flow:column;">
+		<a href="{{ article[0] }}"><h3>{{ article[3] }}</h3></a>
+		<p><b>{{ article[4] }}</b></p>
+		<p style="font-size:0.7em;font-weight:thin;">{{ article[5] }}</p>
+		<p>{{ article[6] }}</p>
+		<p><a href="{{ article[0] }}">Read More</a></p>
+	</div>
+	<hr style="clear:left;">
+
+	{% endfor %}
+
+	<center>
+		{{ data[3]|safe }}
+		{{ data[4]|safe }}
+		<p><small>{{ data[5] }}</small></p>
+	</center>
+	{% include "footer.html" %}
+</body>
+</html>

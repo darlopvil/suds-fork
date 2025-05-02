@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{ data[0] }} - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<h1>{{ data[0] }}</h1>
+	{% for archive in data[1] %}
+	<b>{{ archive[0]|safe }}</b>
+	<ul class="archives">
+		{% for archive_section in archive[1] %}
+		<li>{{ archive_section|safe }}</li>
+		{% endfor %}
+	</ul>
+	{% endfor %}
+	{% include "footer.html" %}
+</body>
+</html>

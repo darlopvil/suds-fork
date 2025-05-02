@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<center>
+		<img src="{{ url_for('static', filename='img/logo.png') }}" height=400px>
+		<form style="align:right" action="/search/" method="get">
+			<input type=text" name="q" placeholder="Search Suds" size=50 style="font-size:18pt">
+			<input type="submit" value="Go" style="font-size:18pt">
+		</form>
+	</center>
+	{% include "footer.html" %}
+</body>
+</html>

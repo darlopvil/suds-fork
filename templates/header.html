@@ -1,0 +1,17 @@
+<ul style="display:flex;justify-content:space-between;list-style-type:none;padding-left:0px;align-items:center;">
+	<li><a href="/"><img style="display:inline" src="{{ url_for('static', filename='img/logo.png') }}" height=100px></a></li>
+	<li><a href="/latest/">Latest</a></li>
+	<li><a href="/top/">Top</a></li>
+	<li><a href="/fact-check/">Fact Checks</a></li>
+	<li><a href="/collections/">Collections</a></li>
+	<li><a href="/news/">News</a></li>
+	<li><a href="/sitemap/">Archives</a></li>
+	<li><a href="/random/">Random</a></li>
+	<li>
+		<form style="align:right" action="/search/" method="get">
+			<input type=text" name="q" placeholder="Search Suds">
+			<input type="submit" value="Go">
+		</form>
+	</li>
+</ul>
+<hr>

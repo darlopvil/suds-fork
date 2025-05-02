@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{ data[1] }} - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<p>{{ data[0]|safe }}</p>
+	<h1>{{ data[1] }}</h1>
+	<p><b>{{ data[2] }}</b></p>
+	<p>by <a href="{{ data[4] }}">{{ data[3] }}</a>, {{ data[5] }}</p>
+	<br>
+	<img src="/proxy/?url={{ data[6] }}" alt="{{ data[7] }}">
+	<p><i>{{ data[8] }}</i></p>
+	<br>
+	{{ data[9]|safe }}
+	<br>
+	{{ data[10]|safe }}
+	<br>
+	<p>By <a href="{{ data[4] }}">{{ data[3] }}</a></p>
+	<p>{{ data[11] }}</p>
+	{% include "footer.html" %}
+</body>
+</html>

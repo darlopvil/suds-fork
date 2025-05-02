@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{{ data[1] }} - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<p>{{ data[0]|safe }}</p>
+	<h1>{{ data[1] }}</h1>
+	<p><b>{{ data[2] }}</b></p>
+	<p>by <a href="{{ data[3] }}">{{ data[4] }}</a>, {{ data[5] }}</p>
+	<br>
+	<img src="/proxy/?url={{ data[6] }}" alt="{{ data[7] }}">
+	<p><i>{{ data[8] }}</i></p>
+	<br>
+	{{ data[9]|safe }}
+	<br>
+	<p>By <a href="{{ data[3] }}">{{ data[4] }}</a></p>
+
+	<p>{{ data[10] }}</p>
+
+	{% for article in data[11] %}
+	<img style="float:left;object-fit:cover;;padding-right:20px;padding-bottom:1em;" src="{{ article[1] }}" alt="{{ article[2] }}" width=325px height=325px>
+	<div style="display:flex;justify-content:left;align-items:left;flex-flow:column;">
+		<h3>{{ article[3] }}</h3>
+		<p style="font-size:0.7em;font-weight:thin;">{{ article[4] }}</p>
+		<p>{{ article[5] }}</p>
+		<p><a href="{{ article[0] }}">Read More</a></p>
+	</div>
+	<hr style="clear:left;">
+
+	{% endfor %}
+	{% include "footer.html" %}
+</body>
+</html>
