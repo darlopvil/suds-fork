@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>{% if query %}{{ query }} - {% endif %}Search - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<h1>Search</h1>
+	<form action="/search/" method="get">
+		<input type="text" name="q" value="{{ query }}" placeholder="Search Suds" size=40>
+		<input type="submit" value="Go">
+	</form>
+	<p><small>Matches the words in article addresses (for example, "kim possible" finds /fact-check/kim-possible/).</small></p>
+
+	{% if building %}
+	<p>The search index is not ready yet. Try again in a minute.</p>
+	{% elif error %}
+	<p>Search is temporarily unavailable. Try again later.</p>
+	{% elif results is not none %}
+	<p><b>{{ total }} result{{ '' if total == 1 else 's' }} for "{{ query }}"</b></p>
+	{% for result in results %}
+	<div>
+		<a href="{{ result.path }}"><h3>{{ result.title }}</h3></a>
+		<p style="font-size:0.7em;">{{ result.section }} &middot; published {{ result.published }} &middot; {{ result.path }}</p>
+	</div>
+	<hr>
+	{% endfor %}
+	{% if pages > 1 %}
+	<center>
+		{% if page > 1 %}<a href="{{ url_for('route_search', q=query, pagenum=page - 1) }}">Previous</a>{% endif %}
+		<small>Page {{ page }} of {{ pages }}</small>
+		{% if page < pages %}<a href="{{ url_for('route_search', q=query, pagenum=page + 1) }}">Next</a>{% endif %}
+	</center>
+	{% endif %}
+	{% endif %}
+	{% include "footer.html" %}
+</body>
+</html>

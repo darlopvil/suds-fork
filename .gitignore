@@ -5,3 +5,6 @@ docker-compose.yml
 # Python
 __pycache__/
 *.pyc
+
+# Search index when running outside Docker
+data/

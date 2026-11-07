@@ -8,3 +8,9 @@ services:
     # Publish only on localhost and put a reverse proxy in front of it
     ports:
       - "127.0.0.1:8001:8001"
+    # Keeps the search index across restarts and rebuilds
+    volumes:
+      - suds_data:/data
+
+volumes:
+  suds_data:

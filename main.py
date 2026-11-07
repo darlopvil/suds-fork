@@ -17,11 +17,15 @@
 ## You should have received a copy of the GNU Affero General Public License
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from flask import Flask, render_template, request, redirect, Response, stream_with_context
+from flask import Flask, render_template, request, redirect, Response, stream_with_context, url_for
 import requests
 import re
 from bs4 import BeautifulSoup
 from copy import copy
+from search_index import SearchIndex
+
+search_index = SearchIndex()
+SEARCH_RESULTS_PER_PAGE = 20
 
 def secondary_list(path):
     data = requests.get("https://www.snopes.com/" + path)
@@ -433,27 +437,37 @@ def route_collection(collection):
     return render_template("collection.html", data=[article_type, title, subtitle, author_link, str(author).strip(), date, cover, cover_alt, cover_desc, article, author_bio, article_list])
 
 @app.route('/search/')
-def route_search_blank():
-    if request.args.get('q') == None:
-        if request.args.get('pagenum') != None:
-            data = secondary_list(f"search/?pagenum={request.args.get('pagenum')}")
-        else:
-            data = secondary_list("search/")
-        if type(data) == int:
-            return Response(render_template(str(data) + ".html"), data)
-        return render_template("list.html", data=data)
-    else:
-        return redirect(f"/search/{request.args.get('q')}/")
+def route_search():
+    # Snopes renders its search results client-side through Google, so
+    # searches are answered from a local index of its sitemaps instead
+    query = request.args.get('q', '').strip()
+    if not query:
+        return render_template("search.html", query='', results=None)
 
-@app.route('/search/<query>/')
-def route_search(query):
-    if request.args.get('pagenum') != None:
-        data = secondary_list(f"search/{query}/?pagenum={request.args.get('pagenum')}")
-    else:
-        data = secondary_list(f"search/{query}/")
-    if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
-    return render_template("list.html", data=data)
+    try:
+        results = search_index.search(query)
+    except Exception:
+        app.logger.exception("search index unavailable")
+        return Response(render_template("search.html", query=query, results=None, error=True), 503)
+    if results is None:
+        response = Response(render_template("search.html", query=query, results=None, building=True), 503)
+        response.headers["Retry-After"] = "30"
+        return response
+
+    pages = max(1, -(-len(results) // SEARCH_RESULTS_PER_PAGE))
+    try:
+        page = min(max(1, int(request.args.get('pagenum', 1))), pages)
+    except ValueError:
+        page = 1
+    start = (page - 1) * SEARCH_RESULTS_PER_PAGE
+    return render_template("search.html", query=query, total=len(results),
+                           results=results[start:start + SEARCH_RESULTS_PER_PAGE],
+                           page=page, pages=pages)
+
+@app.route('/search/<path:query>/')
+def route_search_legacy(query):
+    # Old search URLs kept the query in the path, which broke on "/"
+    return redirect(url_for('route_search', q=query), 301)
 
 @app.route('/random/')
 def route_random():

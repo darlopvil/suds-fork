@@ -8,3 +8,4 @@ README.md
 static/img/*.xcf
 **/__pycache__
 **/*.pyc
+data
