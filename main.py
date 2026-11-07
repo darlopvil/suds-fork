@@ -24,6 +24,24 @@ from bs4 import BeautifulSoup
 from copy import copy
 from search_index import SearchIndex
 
+def remove_all(tag, selector):
+    """Remove every element matching selector; Snopes omits some of them"""
+    for element in tag.select(selector):
+        element.decompose()
+
+def rating_block(rating):
+    """Return the rating block as HTML, or '' when Snopes ships it empty
+    (older fact-checks have the container with no claim and no rating)"""
+    if rating is None:
+        return ''
+    claim = rating.select_one(".claim_cont")
+    has_claim = claim is not None and claim.get_text(strip=True) != ''
+    if not has_claim and rating.select_one(".rating_wrapper") is None:
+        return ''
+    remove_all(rating, "svg")
+    remove_all(rating, "img")
+    return str(rating).replace("https://www.snopes.com", '')
+
 search_index = SearchIndex()
 SEARCH_RESULTS_PER_PAGE = 20
 
@@ -100,7 +118,7 @@ def article_list(path):
 
         # Header
         article_type = soup.find(attrs={"class": ["section_title"]})
-        article_type.find("svg").decompose()
+        remove_all(article_type, "svg")
         head = article_type.find("span")
         if head != None:
             head = head.text
@@ -144,7 +162,7 @@ def news(path):
 
         # Header
         article_type = soup.find(attrs={"class": ["section_title"]})
-        article_type.find("svg").decompose()
+        remove_all(article_type, "svg")
         title_container = soup.find(attrs={"class": ["title-container"]})
         title = title_container.select("h1")[0].text
         subtitle = title_container.select("h2")[0].text
@@ -187,7 +205,7 @@ def fact_check(path):
 
         # Header
         article_type = soup.find(attrs={"class": ["section_title"]})
-        article_type.find("svg").decompose()
+        remove_all(article_type, "svg")
         article_type = article_type.text
         title_container = soup.find(attrs={"class": ["title-container"]})
         title = title_container.select("h1")[0].text
@@ -220,12 +238,7 @@ def fact_check(path):
         article = re.sub(r"(src=\")", r"\1/proxy/?url=", str(article))
         article = article.replace("https://www.snopes.com", '')
 
-        if rating != None:
-            rating.find("svg").decompose()
-            rating.find("img").decompose()
-            rating = str(rating).replace("https://www.snopes.com", '')
-        else:
-            rating = ''
+        rating = rating_block(rating)
 
         # Author bio
         author_bio = soup.select("div.author_bio p")[0].text
@@ -387,7 +400,7 @@ def route_collection(collection):
 
     # Header
     article_type = soup.find(attrs={"class": ["section_title"]})
-    article_type.find("svg").decompose()
+    remove_all(article_type, "svg")
     article_type = article_type.text
     title_container = soup.find(attrs={"class": ["title-container"]})
     title = title_container.select("h1")[0].text
