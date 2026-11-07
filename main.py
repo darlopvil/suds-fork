@@ -20,6 +20,7 @@
 from flask import Flask, render_template, request, redirect, Response, stream_with_context, url_for
 import requests
 import re
+import os
 from bs4 import BeautifulSoup
 from copy import copy
 from search_index import SearchIndex
@@ -248,6 +249,10 @@ def fact_check(path):
         return data.status_code
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+
+# AGPL-3.0 section 13: users of a modified version running on a network must
+# be offered its source. Deployments of other forks point this to their own.
+app.jinja_env.globals["source_url"] = os.environ.get("SUDS_SOURCE_URL", "https://github.com/darlopvil/suds-fork")
 
 @app.route('/fact-check/')
 def route_fact_check_list():
