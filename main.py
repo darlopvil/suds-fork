@@ -18,6 +18,7 @@
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask import Flask, render_template, request, redirect, Response, stream_with_context, url_for
+from werkzeug.exceptions import HTTPException
 import requests
 import re
 import os
@@ -254,6 +255,22 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 # be offered its source. Deployments of other forks point this to their own.
 app.jinja_env.globals["source_url"] = os.environ.get("SUDS_SOURCE_URL", "https://github.com/darlopvil/suds-fork")
 
+ERROR_MESSAGES = {
+    400: "The request was malformed",
+    404: "This resource cannot be found",
+    500: "Something went wrong on this instance",
+    502: "Snopes could not be reached or returned an error",
+}
+
+def error_page(code, message=None):
+    message = message or ERROR_MESSAGES.get(code, "")
+    return Response(render_template("error.html", code=code, message=message), code)
+
+def upstream_error(status):
+    """Answer a non-200 status from Snopes: its 404s are ours too, any
+    other status is a bad gateway"""
+    return error_page(404 if status == 404 else 502)
+
 @app.route('/fact-check/')
 def route_fact_check_list():
     if request.args.get('pagenum') != None:
@@ -261,7 +278,7 @@ def route_fact_check_list():
     else:
         data = article_list("fact-check/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/fact-check/category/<category>/')
@@ -271,7 +288,7 @@ def route_fact_check_category(category):
     else:
         data = secondary_list(f"fact-check/category/{category}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/fact-check/rating/<rating>/')
@@ -281,7 +298,7 @@ def route_fact_check_rating(rating):
     else:
         data = secondary_list(f"fact-check/rating/{rating}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/latest/')
@@ -291,7 +308,7 @@ def route_latest():
     else:
         data = article_list("latest/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/top/')
@@ -301,7 +318,7 @@ def route_top():
     else:
         data = article_list("top/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/news/')
@@ -311,7 +328,7 @@ def route_news_list():
     else:
         data = article_list("news/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/news/category/<category>/')
@@ -321,7 +338,7 @@ def route_news_category(category):
     else:
         data = secondary_list(f"news/category/{category}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/articles/')
@@ -331,7 +348,7 @@ def route_articles():
     else:
         data = article_list("articles/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/classics/')
@@ -341,28 +358,28 @@ def route_classics():
     else:
         data = article_list("classics/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/news/<year>/<month>/<day>/<article>/')
 def route_news(year, month, day, article):
     data = news(f"news/{year}/{month}/{day}/{article}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("news.html", data=data)
 
 @app.route('/articles/<article_id>/<article>/')
 def route_article(article_id, article):
     data = news(f"articles/{article_id}/{article}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("news.html", data=data)
 
 @app.route('/fact-check/<article>/')
 def route_fact_check(article):
     data = fact_check(article)
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("fact-check.html", data=data)
 
 @app.route('/author/<author>/')
@@ -372,7 +389,7 @@ def route_author(author):
     else:
         data = secondary_list(f"author/{author}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/tag/<tag>/')
@@ -382,7 +399,7 @@ def route_tag(tag):
     else:
         data = secondary_list(f"tag/{tag}/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/collections/')
@@ -392,7 +409,7 @@ def route_collections():
     else:
         data = secondary_list("collections/")
     if type(data) == int:
-        return Response(render_template(str(data) + ".html"), data)
+        return upstream_error(data)
     return render_template("list.html", data=data)
 
 @app.route('/collections/<collection>/')
@@ -400,7 +417,7 @@ def route_collection(collection):
     data = requests.get(f"https://www.snopes.com/collections/{collection}/")
     print(data)
     if data.status_code != 200:
-        return Response(render_template(str(data.status_code) + ".html"), data.status_code)
+        return upstream_error(data.status_code)
     soup = BeautifulSoup(data.text, "html.parser")
 
     # Header
@@ -491,14 +508,14 @@ def route_search_legacy(query):
 def route_random():
     data = requests.get("https://www.snopes.com/random/")
     if data.status_code != 200:
-        return Response(render_template(str(data.status_code) + ".html"), data.status_code)
+        return upstream_error(data.status_code)
     return redirect(data.url.replace("https://www.snopes.com", ''), 307)
 
 @app.route('/sitemap/')
 def route_sitemap():
     data = requests.get("https://www.snopes.com/sitemap/")
     if data.status_code != 200:
-        return Response(render_template(str(data.status_code) + ".html"), data.status_code)
+        return upstream_error(data.status_code)
 
     soup = BeautifulSoup(data.text, "html.parser")
     title = soup.find("h2").text
@@ -531,18 +548,25 @@ def route_proxy():
             data = requests.get("https://www.snopes.com" + url)
             return Response(data.content, content_type=data.headers["content-type"])
         else:
-            return Response(render_template("400.html"), status=400)
+            return error_page(400)
     else:
-        return Response(render_template("400.html"), status=400)
+        return error_page(400)
 
 @app.before_request
 def add_slash():
     if not request.path.endswith('/'):
         return redirect(request.path + '/')
 
-@app.errorhandler(404)
-def not_found(e):
-    return render_template("404.html")
+@app.errorhandler(HTTPException)
+def http_error(e):
+    # Covers 404 and 405, and 500 after Flask has logged the traceback
+    return error_page(e.code, ERROR_MESSAGES.get(e.code, e.name))
+
+@app.errorhandler(requests.RequestException)
+def upstream_unreachable(e):
+    # Timeouts, connection errors and redirect loops from Snopes
+    app.logger.warning("upstream request failed: %r", e)
+    return error_page(502)
 
 if __name__ == '__main__':
     app.run(port=8001)

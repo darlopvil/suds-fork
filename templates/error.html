@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>404 - Suds</title>
+	<title>{{ code }} - Suds</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -10,8 +10,8 @@
 <body>
 	{% include "header.html" %}
 	<center>
-		<h1 style="font-size:10em;line-height:0em;">404</h1>
-		<p>This resource cannot be found</p>
+		<h1 style="font-size:10em;line-height:0em;">{{ code }}</h1>
+		<p>{{ message }}</p>
 	</center>
 	{% include "footer.html" %}
 </body>
