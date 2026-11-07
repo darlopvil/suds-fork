@@ -1,0 +1,10 @@
+# Copy to docker-compose.yml and adapt it to your setup.
+services:
+  suds:
+    build: .
+    image: suds:local
+    container_name: suds_app
+    restart: unless-stopped
+    # Publish only on localhost and put a reverse proxy in front of it
+    ports:
+      - "127.0.0.1:8001:8001"

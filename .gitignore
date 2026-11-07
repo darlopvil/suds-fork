@@ -1,0 +1,7 @@
+# Local deployment file (copy it from docker-compose.yml.example)
+docker-compose.yml
+.env
+
+# Python
+__pycache__/
+*.pyc
