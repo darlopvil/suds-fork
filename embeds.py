@@ -67,6 +67,10 @@ PHICE_PATH = re.compile(
     r"|reel/[^/]+/?|photo(?:\.php)?|permalink\.php|story\.php|watch"
     r"|groups/[^/]+/(?:posts|permalink)/[^/]+/?)$")
 
+# Hit counters of syndicated articles: invisible images that only report
+# the visit to a third party
+TRACKING_PIXEL = re.compile(r"^(?:https?:)?//counter\.theconversation\.com/")
+
 EMBED_SELECTOR = ", ".join([
     "iframe",
     "blockquote.twitter-tweet", "blockquote.twitter-video",
@@ -213,7 +217,11 @@ def _lift(element):
 
 
 def replace_embeds(article):
-    """Replace the embeds of an article element in place"""
+    """Replace the embeds of an article element in place, and drop the
+    tracking pixels of syndicated articles"""
+    for img in article.find_all("img"):
+        if TRACKING_PIXEL.match(img.get("data-src") or img.get("src") or ""):
+            img.decompose()
     for element in article.select(EMBED_SELECTOR):
         if element.parent is None:  # inside an embed replaced earlier
             continue

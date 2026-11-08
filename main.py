@@ -72,6 +72,16 @@ SRC_TO_PROXY = re.compile(r'(src=")' + (
 def proxy_sources(html):
     return SRC_TO_PROXY.sub(r"\1/proxy/?url=", html)
 
+IMAGE_FILE = re.compile(r"\.(?:jpe?g|png|gif|webp)(?:[?#]|$)", re.I)
+
+def proxy_image_links(article):
+    """Links that wrap an image and open the full-size file go through the
+    image proxy, wherever they sit in the article"""
+    for a in article.select("a:has(img)"):
+        href = a.get("href", "")
+        if IMAGE_FILE.search(href):
+            a["href"] = "/proxy/?url=" + href
+
 def secondary_list(path, params=None):
     data = fetch(SNOPES + "/" + path, params=params)
 
@@ -213,8 +223,7 @@ def news(path):
         for div in article.select("div"): div.decompose()
         for script in article.select("script"): script.decompose()
 
-        for a in article.select("p a:has(img)"):
-            a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
+        proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
 
@@ -262,8 +271,7 @@ def fact_check(path):
         if article.find("section") != None:
             article.find("section").decompose()
 
-        for a in article.select("p a:has(img)"):
-            a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
+        proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
 
@@ -462,8 +470,7 @@ def route_collection(collection):
     for div in article.select("div"): div.decompose()
     for script in article.select("script"): script.decompose()
 
-    for a in article.select("p a:has(img)"):
-        a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
+    proxy_image_links(article)
     article = proxy_sources(str(article))
 
     # Author bio
@@ -557,7 +564,13 @@ def route_home():
     return render_template("index.html")
 
 
-PROXY_PREFIXES = ("https://mediaproxy.snopes.com/", "https://media.snopes.com/", "https://www.snopes.com/")
+SNOPES_MEDIA = "https://media.snopes.com/"
+# Snopes' own media proxy, which serves media.snopes.com files (fetched
+# directly, they answer 403); 600 px is the width Snopes uses in articles
+SNOPES_MEDIA_PROXY = "https://mediaproxy.snopes.com/width/600/"
+# Third-party hosts of images that articles show inline (measured)
+EXTERNAL_IMAGE_HOSTS = ("https://images.theconversation.com/",)
+PROXY_PREFIXES = ("https://mediaproxy.snopes.com/", SNOPES_MEDIA, SNOPES + "/") + EXTERNAL_IMAGE_HOSTS
 # image/* includes SVG, which can run scripts when opened directly: the
 # proxied file may only be displayed, never executed or sniffed as HTML
 PROXY_HEADERS = {
@@ -570,11 +583,26 @@ def route_proxy():
     # Image proxy for Snopes media. It only serves images, so it cannot be
     # used to serve Snopes' pages (and their scripts) from this origin.
     url = request.args.get("url", "")
+    # Some legacy articles use paths relative to the site root without the
+    # leading slash ("graphics/x.jpg")
+    if url and not url.startswith(("/", "https://", "http://")):
+        url = "/" + url
     if url.startswith("/") and not url.startswith("//"):
         url = SNOPES + url
     if not url.startswith(PROXY_PREFIXES):
         return error_page(400)
-    data = fetch(url)
+    data = None
+    if url.startswith(SNOPES + "/"):
+        # Legacy image paths (/uploads/, /images/, /tachyon/...) redirect to
+        # media.snopes.com: follow that redirect here
+        data = fetch(url, allow_redirects=False)
+        location = data.headers.get("Location", "")
+        if data.is_redirect and location.startswith(SNOPES_MEDIA):
+            url, data = location, None
+    if url.startswith(SNOPES_MEDIA):
+        url = SNOPES_MEDIA_PROXY + url
+    if data is None:
+        data = fetch(url)
     if data.status_code != 200:
         return upstream_error(data.status_code)
     content_type = data.headers.get("Content-Type", "")
