@@ -309,12 +309,19 @@ def route_fact_check_list():
         return upstream_error(data)
     return render_template("list.html", data=data)
 
-@app.route('/fact-check/category/<slug:category>/')
-def route_fact_check_category(category):
-    data = secondary_list(f"fact-check/category/{category}/", page_param())
+@app.route('/category/<slug:category>/')
+def route_category(category):
+    data = secondary_list(f"category/{category}/", page_param())
     if type(data) == int:
         return upstream_error(data)
     return render_template("list.html", data=data)
+
+# Snopes moved categories to /category/<name>/ and answers 404 on the old
+# per-section paths; keep old links working
+@app.route('/fact-check/category/<slug:category>/')
+@app.route('/news/category/<slug:category>/')
+def route_old_category(category):
+    return redirect(url_for('route_category', category=category, **page_param()), 301)
 
 @app.route('/fact-check/rating/<slug:rating>/')
 def route_fact_check_rating(rating):
@@ -344,12 +351,6 @@ def route_news_list():
         return upstream_error(data)
     return render_template("list.html", data=data)
 
-@app.route('/news/category/<slug:category>/')
-def route_news_category(category):
-    data = secondary_list(f"news/category/{category}/", page_param())
-    if type(data) == int:
-        return upstream_error(data)
-    return render_template("list.html", data=data)
 
 @app.route('/articles/')
 def route_articles():
@@ -361,6 +362,13 @@ def route_articles():
 @app.route('/classics/')
 def route_classics():
     data = article_list("classics/", page_param())
+    if type(data) == int:
+        return upstream_error(data)
+    return render_template("list.html", data=data)
+
+@app.route('/listicles/')
+def route_listicles():
+    data = secondary_list("listicles/", page_param())
     if type(data) == int:
         return upstream_error(data)
     return render_template("list.html", data=data)
