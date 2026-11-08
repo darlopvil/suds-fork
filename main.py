@@ -554,8 +554,14 @@ def route_proxy():
 
 @app.before_request
 def add_slash():
-    if not request.path.endswith('/'):
-        return redirect(request.path + '/')
+    # Pages live under URLs ending in "/". Keep the query string, and leave
+    # static files alone: url_for() links them without a trailing slash.
+    if request.path.endswith('/') or request.endpoint == 'static':
+        return None
+    url = request.path + '/'
+    if request.query_string:
+        url += '?' + request.query_string.decode()
+    return redirect(url, 308)
 
 @app.errorhandler(HTTPException)
 def http_error(e):
