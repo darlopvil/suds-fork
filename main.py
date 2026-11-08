@@ -537,20 +537,30 @@ def route_home():
     return render_template("index.html")
 
 
+PROXY_PREFIXES = ("https://mediaproxy.snopes.com/", "https://media.snopes.com/", "https://www.snopes.com/")
+# image/* includes SVG, which can run scripts when opened directly: the
+# proxied file may only be displayed, never executed or sniffed as HTML
+PROXY_HEADERS = {
+    "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+    "X-Content-Type-Options": "nosniff",
+}
+
 @app.route('/proxy/')
 def route_proxy():
-    url = request.args.get("url")
-    if url != None:
-        if url.startswith("https://mediaproxy.snopes.com/") or url.startswith("https://media.snopes.com/") or url.startswith("https://www.snopes.com/"):
-            data = fetch(url)
-            return Response(data.content, content_type=data.headers["content-type"])
-        elif url.startswith("/") and not url.startswith("//"):
-            data = fetch(SNOPES + url)
-            return Response(data.content, content_type=data.headers["content-type"])
-        else:
-            return error_page(400)
-    else:
+    # Image proxy for Snopes media. It only serves images, so it cannot be
+    # used to serve Snopes' pages (and their scripts) from this origin.
+    url = request.args.get("url", "")
+    if url.startswith("/") and not url.startswith("//"):
+        url = SNOPES + url
+    if not url.startswith(PROXY_PREFIXES):
         return error_page(400)
+    data = fetch(url)
+    if data.status_code != 200:
+        return upstream_error(data.status_code)
+    content_type = data.headers.get("Content-Type", "")
+    if not content_type.startswith("image/"):
+        return error_page(502)
+    return Response(data.content, content_type=content_type, headers=PROXY_HEADERS)
 
 @app.before_request
 def add_slash():
