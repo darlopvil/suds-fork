@@ -34,6 +34,33 @@ def remove_all(tag, selector):
     for element in tag.select(selector):
         element.decompose()
 
+# Elements that only format text: a paragraph made of these and blank
+# space shows nothing
+FORMATTING_TAGS = {"br", "font", "span", "b", "strong", "i", "em", "u"}
+
+def remove_blank_paragraphs(article):
+    """Legacy articles pad their text with dozens of empty paragraphs
+    (<p>&nbsp;</p>, <p><br><br>&nbsp;</p>): 54 in a single fact-check.
+    Paragraphs holding anything else (embeds, links...) are kept."""
+    for p in article.find_all("p"):
+        if getattr(p, "decomposed", False):
+            continue
+        if p.get_text().replace("\xa0", "").strip():
+            continue
+        if all(tag.name in FORMATTING_TAGS for tag in p.find_all(True)):
+            p.decompose()
+
+def cover_image(soup):
+    """Cover image, alt text and caption; empty when Snopes only shows its
+    generic placeholder (default_thumb), which says nothing about the article"""
+    cover = soup.find(attrs={"id": ["cover-main"]})
+    src = cover.get("src") or ""
+    if "/default_thumb" in src:
+        return "", "", ""
+    desc = soup.find(attrs={"class": ["article_img_desc"]})
+    caption = desc.select("span")[0].text if desc is not None and desc.select("span") != [] else ""
+    return src, cover.get("alt"), caption
+
 def rating_block(rating):
     """Return the rating block as HTML, or '' when Snopes ships it empty
     (older fact-checks have the container with no claim and no rating)"""
@@ -210,11 +237,7 @@ def news(path):
         date = author_container.find(attrs={"class": ["published_date"]}).text
         
         # Cover image
-        cover = soup.find(attrs={"id": ["cover-main"]}).get("src")
-        cover_alt = soup.find(attrs={"id": ["cover-main"]}).get("alt")
-        cover_desc = ""
-        if soup.find(attrs={"class": ["article_img_desc"]}).select("span") != []:
-            cover_desc = soup.find(attrs={"class": ["article_img_desc"]}).select("span")[0].text
+        cover, cover_alt, cover_desc = cover_image(soup)
 
         # Article
         article = soup.find(attrs={"id": ["article-content"]})
@@ -223,6 +246,7 @@ def news(path):
         for div in article.select("div"): div.decompose()
         for script in article.select("script"): script.decompose()
 
+        remove_blank_paragraphs(article)
         proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
@@ -254,11 +278,7 @@ def fact_check(path):
         date = author_container.find(attrs={"class": ["published_date"]}).text
         
         # Cover image
-        cover = soup.find(attrs={"id": ["cover-main"]}).get("src")
-        cover_alt = soup.find(attrs={"id": ["cover-main"]}).get("alt")
-        cover_desc = ""
-        if soup.find(attrs={"class": ["article_img_desc"]}).select("span") != []:
-            cover_desc = soup.find(attrs={"class": ["article_img_desc"]}).select("span")[0].text
+        cover, cover_alt, cover_desc = cover_image(soup)
 
         # Article
         article = soup.find(attrs={"id": ["article-content"]})
@@ -271,6 +291,7 @@ def fact_check(path):
         if article.find("section") != None:
             article.find("section").decompose()
 
+        remove_blank_paragraphs(article)
         proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
@@ -456,11 +477,7 @@ def route_collection(collection):
     date = author_container.find(attrs={"class": ["published_date"]}).text
 
     # Cover image
-    cover = soup.find(attrs={"id": ["cover-main"]}).get("src")
-    cover_alt = soup.find(attrs={"id": ["cover-main"]}).get("alt")
-    cover_desc = ""
-    if soup.find(attrs={"class": ["article_img_desc"]}).select("span") != []:
-        cover_desc = soup.find(attrs={"class": ["article_img_desc"]}).select("span")[0].text
+    cover, cover_alt, cover_desc = cover_image(soup)
 
     # Article
     article = soup.find(attrs={"id": ["article-content"]})
@@ -470,6 +487,7 @@ def route_collection(collection):
     for div in article.select("div"): div.decompose()
     for script in article.select("script"): script.decompose()
 
+    remove_blank_paragraphs(article)
     proxy_image_links(article)
     article = proxy_sources(str(article))
 

@@ -14,8 +14,10 @@
 	<p><b>{{ data[2] }}</b></p>
 	<p>by <a href="{{ data[3] }}">{{ data[4] }}</a>, {{ data[5] }}</p>
 	<br>
+	{% if data[6] %}
 	<img src="/proxy/?url={{ data[6] }}" alt="{{ data[7] }}">
 	<p><i>{{ data[8] }}</i></p>
+	{% endif %}
 	<br>
 	{{ data[9]|safe }}
 	<br>
