@@ -27,6 +27,7 @@ import http.cookiejar
 from bs4 import BeautifulSoup
 from copy import copy
 from search_index import SearchIndex
+from embeds import replace_embeds, FRAMED_FRONTENDS
 
 def remove_all(tag, selector):
     """Remove every element matching selector; Snopes omits some of them"""
@@ -62,6 +63,14 @@ upstream.cookies.set_policy(http.cookiejar.DefaultCookiePolicy(allowed_domains=[
 def fetch(url, **kwargs):
     """GET from Snopes through the shared connection pool, with timeouts"""
     return upstream.get(url, timeout=UPSTREAM_TIMEOUT, **kwargs)
+
+# src= attributes go through the image proxy, except the iframes to privacy
+# frontends that replace embeds
+SRC_TO_PROXY = re.compile(r'(src=")' + (
+    "(?!" + "|".join(re.escape(u) for u in FRAMED_FRONTENDS) + ")" if FRAMED_FRONTENDS else ""))
+
+def proxy_sources(html):
+    return SRC_TO_PROXY.sub(r"\1/proxy/?url=", html)
 
 def secondary_list(path, params=None):
     data = fetch(SNOPES + "/" + path, params=params)
@@ -199,13 +208,14 @@ def news(path):
 
         # Article
         article = soup.find(attrs={"id": ["article-content"]})
+        replace_embeds(article)
         
         for div in article.select("div"): div.decompose()
         for script in article.select("script"): script.decompose()
 
         for a in article.select("p a:has(img)"):
             a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
-        article = re.sub(r"(src=\")", r"\1/proxy/?url=", str(article))
+        article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
 
         # Author bio
@@ -243,6 +253,7 @@ def fact_check(path):
 
         # Article
         article = soup.find(attrs={"id": ["article-content"]})
+        replace_embeds(article)
         rating = copy(article.find(attrs={"id": ["fact_check_rating_container"]}))
         
         for div in article.select("div.snopesad"): div.decompose()
@@ -253,7 +264,7 @@ def fact_check(path):
 
         for a in article.select("p a:has(img)"):
             a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
-        article = re.sub(r"(src=\")", r"\1/proxy/?url=", str(article))
+        article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
 
         rating = rating_block(rating)
@@ -445,6 +456,7 @@ def route_collection(collection):
 
     # Article
     article = soup.find(attrs={"id": ["article-content"]})
+    replace_embeds(article)
     article_copy = copy(article)
 
     for div in article.select("div"): div.decompose()
@@ -452,7 +464,7 @@ def route_collection(collection):
 
     for a in article.select("p a:has(img)"):
         a["href"] = re.sub(r"^(.*)$", r"/proxy/?url=\1", a["href"])
-    article = re.sub(r"(src=\")", r"\1/proxy/?url=", str(article))
+    article = proxy_sources(str(article))
 
     # Author bio
     author_bio = soup.select("div.author_bio p")[0].text

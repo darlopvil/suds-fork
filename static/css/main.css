@@ -115,3 +115,40 @@ ul.archives li {
 	flex-basis:33%;
 	translate: -10% 0;
 }
+
+/* Embeds replaced by privacy frontends (embeds.py) */
+figure.embed {
+	margin: 1em auto;
+	text-align: center;
+}
+
+figure.embed iframe {
+	border: none;
+	max-width: 100%;
+}
+
+figure.embed-video iframe {
+	width: 640px;
+	height: auto;
+	aspect-ratio: 16 / 9;
+}
+
+figure.embed-tweet iframe {
+	width: 550px;
+	height: 600px;
+}
+
+figure.embed-tiktok iframe {
+	width: 325px;
+	height: 745px;
+}
+
+figure.embed-reddit iframe {
+	width: 640px;
+	height: 420px;
+}
+
+p.embed-link {
+	text-align: center;
+	overflow-wrap: anywhere;
+}

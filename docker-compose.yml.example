@@ -8,10 +8,20 @@ services:
     # Publish only on localhost and put a reverse proxy in front of it
     ports:
       - "127.0.0.1:8001:8001"
-    # Link to the source code of this deployment (AGPL-3.0); defaults to
-    # this repository. Set it if you deploy your own modified version.
+    # All optional:
+    # - SUDS_SOURCE_URL: link to the source code of this deployment
+    #   (AGPL-3.0); defaults to this repository. Set it if you deploy your
+    #   own modified version.
+    # - *_URL: privacy frontends for embedded media. An unset one turns that
+    #   kind of embed into a plain link to the original site.
     # environment:
     #   SUDS_SOURCE_URL: https://example.org/your/fork
+    #   INVIDIOUS_URL: https://invidious.example.org
+    #   NITTER_URL: https://nitter.example.org
+    #   PROXITOK_URL: https://proxitok.example.org
+    #   EDDRIT_URL: https://eddrit.example.org
+    #   KITTYGRAM_URL: https://kittygram.example.org
+    #   PHICE_URL: https://phice.example.org
     # Keeps the search index across restarts and rebuilds
     volumes:
       - suds_data:/data

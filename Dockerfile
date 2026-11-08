@@ -20,7 +20,7 @@ COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Build from the local source instead of cloning a remote repository
-COPY main.py search_index.py LICENSE ./
+COPY main.py search_index.py embeds.py LICENSE ./
 COPY templates ./templates
 COPY static ./static
 
