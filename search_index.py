@@ -54,13 +54,33 @@ SITEMAP_INDEX = "https://media.snopes.com/sitemaps/sitemap-index.xml"
 MONTHLY_SITEMAP = re.compile(r"/sitemap-articles-(\d{4})-(\d{2})\.xml$")
 LOC = re.compile(r"<loc>\s*https://www\.snopes\.com(/[^<\s]*)\s*</loc>")
 
-# Sections Suds has routes for, with their display label
+# Sections Suds has routes for, with the label Snopes gives them
 SECTIONS = {
     "fact-check": "Fact Check",
     "news": "News",
     "collections": "Collection",
     "articles": "Article",
+    "list": "Listicle",
+    "notes": "Notes",
+    "tracker": "Tracker",
+    "live": "Live Updates",
 }
+# Old posts live at /<YYYY>/<MM>/<DD>/<slug>/
+DATED_POST = re.compile(r"^/\d{4}/\d{2}/\d{2}/[^/]+/$")
+
+# Bumped whenever the stored entries change meaning (e.g. new sections):
+# an index with another version is rebuilt from scratch
+INDEX_VERSION = 2
+
+
+def section_of(path):
+    """Display label of an article path, or None if Suds can't show it"""
+    first = path.strip("/").split("/")[0]
+    if first in SECTIONS:
+        return SECTIONS[first]
+    if DATED_POST.match(path):
+        return "Post"
+    return None
 
 # Snopes adds 6-7 articles per day, so one refresh a day is enough
 REFRESH_SECONDS = 24 * 60 * 60
@@ -116,7 +136,7 @@ class SearchIndex:
         year, month = MONTHLY_SITEMAP.search(url).groups()
         entries = []
         for path in LOC.findall(self._fetch(url)):
-            if path.strip("/").split("/")[0] in SECTIONS:
+            if section_of(path):
                 entries.append([path, f"{year}-{month}"])
         return url, entries
 
@@ -134,7 +154,7 @@ class SearchIndex:
             fetched = dict(pool.map(self._sitemap_entries, todo))
 
         updated = {url: fetched.get(url, sitemaps.get(url)) for url in listed}
-        self._write({"built": time.time(), "sitemaps": updated})
+        self._write({"version": INDEX_VERSION, "built": time.time(), "sitemaps": updated})
         count = sum(len(entries) for entries in updated.values())
         print(f"search index: fetched {len(todo)} of {len(listed)} sitemaps, "
               f"{count} articles, {time.monotonic() - started:.1f}s",
@@ -170,10 +190,12 @@ class SearchIndex:
                 return False
             try:
                 age = self._age()
-                if age is not None and age < REFRESH_SECONDS:
+                stored = self._read() if age is not None else None
+                current = stored is not None and stored.get("version") == INDEX_VERSION
+                if current and age < REFRESH_SECONDS:
                     return False
-                sitemaps = self._read()["sitemaps"] if age is not None else {}
-                self._refresh(sitemaps)
+                # An index from another version is rebuilt from scratch
+                self._refresh(stored["sitemaps"] if current else {})
                 return True
             except (requests.RequestException, OSError, ValueError) as e:
                 print(f"search index: refresh failed: {e!r}",
@@ -221,9 +243,11 @@ class SearchIndex:
                 if path in seen:
                     continue
                 seen.add(path)
-                parts = path.strip("/").split("/")
-                slug = parts[-1]
-                entries.append((path, SECTIONS[parts[0]], month,
+                section = section_of(path)
+                if section is None:
+                    continue
+                slug = path.strip("/").split("/")[-1]
+                entries.append((path, section, month,
                                 slug, frozenset(tokenize(slug))))
         self._entries = entries
         self._mtime = mtime

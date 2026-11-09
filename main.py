@@ -218,6 +218,35 @@ def article_list(path, params=None):
         return data.status_code
 
 
+LIVE_UPDATE_LINK = re.compile(r"copy_live_update_link\('(live_update_\d+)'\)")
+
+def live_updates(article):
+    """Make live updates readable without JavaScript.
+
+    Snopes prints each update's age ("786 days ago", frozen when the page is
+    fetched) and keeps the timestamps in title attributes; the link icon only
+    copies a permalink to the clipboard and shows "Link Copied!".
+    """
+    for date in article.select("div.template_date"):
+        edited = date.select_one("span.live_update_time")
+        text = date.get("title", "").removeprefix("Published: ")[:16]
+        if edited:
+            changed = edited.get("title", "").removeprefix("Edited: ")[:16]
+            if changed != text:
+                text += " · edited " + changed
+        date.clear()
+        date.string = text
+        del date["title"]
+    for link in article.select("a.live_link"):
+        target = LIVE_UPDATE_LINK.search(link.get("onclick", ""))
+        if target:
+            link["href"] = "#" + target.group(1)
+            link["title"] = "Link to this update"
+        else:
+            del link["href"]
+        del link["onclick"]
+        remove_all(link, "span.copy_link_text")
+
 def news(path):
     data = fetch(SNOPES + "/" + path)
 
@@ -242,9 +271,16 @@ def news(path):
         # Article
         article = soup.find(attrs={"id": ["article-content"]})
         replace_embeds(article)
-        
-        for div in article.select("div"): div.decompose()
+
+        # Only ad slots go: other divs hold content (listicle items, tracker
+        # tables, quotes, notes), about 106,000 words in 182 sampled pages
+        for div in article.select("div.snopesad, div.proper-ad-unit"): div.decompose()
+        for div in article.select("div"): del div["style"]
         for script in article.select("script"): script.decompose()
+        # Tracker details are unfolded with JavaScript: show them all
+        for row in article.select("tr.hidden_row"): del row["style"]
+        live_updates(article)
+        for field in article.select("input[type=hidden]"): field.decompose()
 
         remove_blank_paragraphs(article)
         proxy_image_links(article)
@@ -416,6 +452,22 @@ def route_listicles():
 @app.route('/news/<slug:year>/<slug:month>/<slug:day>/<slug:article>/')
 def route_news(year, month, day, article):
     data = news(f"news/{year}/{month}/{day}/{article}/")
+    if type(data) == int:
+        return upstream_error(data)
+    return render_template("news.html", data=data)
+
+# Old posts at /<YYYY>/<MM>/<DD>/<slug>/ and the listicle, notes, tracker
+# and live update sections; the news parser reads all of them
+@app.route('/<int(fixed_digits=4):year>/<int(fixed_digits=2):month>/<int(fixed_digits=2):day>/<slug:article>/')
+def route_dated_post(year, month, day, article):
+    data = news(f"{year:04d}/{month:02d}/{day:02d}/{article}/")
+    if type(data) == int:
+        return upstream_error(data)
+    return render_template("news.html", data=data)
+
+@app.route('/<any(list, notes, tracker, live):section>/<slug:article>/')
+def route_section_article(section, article):
+    data = news(f"{section}/{article}/")
     if type(data) == int:
         return upstream_error(data)
     return render_template("news.html", data=data)

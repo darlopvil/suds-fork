@@ -167,3 +167,88 @@ p.embed-link {
 	padding-left: 10px;
 	margin: 1em 10px 1em 0;
 }
+
+/* Listicle items (div.layout_template_wrapper) */
+#article-content .template_header {
+	display: flex;
+	gap: 0.5em;
+	margin-top: 1.5em;
+	font-size: 1.3em;
+	font-weight: bold;
+}
+
+/* Tracker tables: without JavaScript every row shows its details, so the
+   toggles, sort arrows and mobile-only labels go */
+#article-content .outer_tracker_table .toggle_header,
+#article-content .outer_tracker_table .toggle_cell,
+#article-content .outer_tracker_table .sort_arrow,
+#article-content .outer_tracker_table .mobile_column_name {
+	display: none;
+}
+
+/* Wide tables scroll sideways instead of overflowing the page */
+#article-content .inner_tracker_table {
+	overflow-x: auto;
+	margin: 1.5em 0;
+}
+
+#article-content .outer_tracker_table table {
+	border-collapse: collapse;
+	width: 100%;
+	border: 1px solid #969ba6;
+}
+
+#article-content .outer_tracker_table th,
+#article-content .outer_tracker_table td {
+	text-align: left;
+	vertical-align: top;
+	padding: 0.4em 0.8em;
+}
+
+#article-content .outer_tracker_table thead th {
+	background: #20232a;
+	color: #51afef;
+	border-bottom: 2px solid #969ba6;
+}
+
+/* Each entry: a shaded summary row, then its details indented below */
+#article-content .outer_tracker_table tbody tr:not(.hidden_row) td {
+	background: #323844;
+	color: #dfdfdf;
+	font-weight: bold;
+	border-top: 1px solid #969ba6;
+}
+
+#article-content .outer_tracker_table tr.hidden_row td {
+	padding: 0.2em 0.8em 0.6em 2em;
+	font-size: 0.95em;
+}
+
+/* Icons inside articles come without a size (tracker carets and the link
+   icons of live updates are the only ones measured) */
+#article-content svg {
+	width: 1em;
+	height: 1em;
+}
+
+/* Live updates: a dated entry each, with a permalink icon */
+#article-content .live_updates {
+	border-top: 1px solid #969ba6;
+	margin-top: 1.5em;
+	padding-top: 0.5em;
+}
+
+#article-content .live_updates .template_header {
+	display: block;
+	margin-top: 0;
+}
+
+#article-content .live_updates .template_date {
+	font-size: 0.7em;
+	font-weight: normal;
+	color: #969ba6;
+}
+
+#article-content .live_updates:target {
+	border-top-color: #51afef;
+}
