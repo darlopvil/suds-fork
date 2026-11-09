@@ -295,7 +295,8 @@ def news(path):
         return data.status_code
 
 def fact_check(path):
-    data = fetch(SNOPES + "/fact-check/" + path)
+    # With the trailing slash: without it Snopes answers with a redirect
+    data = fetch(SNOPES + "/fact-check/" + path + "/")
 
     if data.status_code == 200:
         soup = BeautifulSoup(data.text, "html.parser")
