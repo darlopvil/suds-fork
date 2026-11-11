@@ -78,6 +78,8 @@ EMBED_SELECTOR = ", ".join([
     "blockquote.tiktok-embed",
     "blockquote.reddit-embed-bq", "blockquote.reddit-card",
     "div.fb-post", "div.fb-video",
+    # Tweets Snopes fills in with Twitter's script from the id alone
+    "div.twitter_tweet_display_box",
 ])
 
 _factory = BeautifulSoup("", "html.parser")
@@ -158,11 +160,17 @@ def _iframe(element):
     return _link("Embedded content", src)
 
 
+def _tweet_by_id(tweet_id):
+    if NITTER:
+        return _frame("tweet", f"{NITTER}/i/status/{tweet_id}/embed")
+    return _link("Tweet", f"https://x.com/i/status/{tweet_id}")
+
+
 def _tweet(element):
     for href in _links(element):
         if (match := TWEET_ID.search(href)):
             if NITTER:
-                return _frame("tweet", f"{NITTER}/i/status/{match.group(1)}/embed")
+                return _tweet_by_id(match.group(1))
             return None  # the quote keeps the tweet's text and links
     return None
 
@@ -197,6 +205,11 @@ def _replacement(element):
         return _tiktok(video_id) if video_id else None
     if "reddit-embed-bq" in classes or "reddit-card" in classes:
         return _reddit(element)
+    if "twitter_tweet_display_box" in classes:
+        # An empty box: the id is all there is, so without Nitter it
+        # becomes a link
+        tweet_id = element.get("data-tweet-id", "")
+        return _tweet_by_id(tweet_id) if tweet_id.isdigit() else None
     if element.name == "div":  # fb-post, fb-video
         href = element.get("data-href", "")
         return _facebook(href) if href else None
@@ -204,10 +217,12 @@ def _replacement(element):
 
 
 def _lift(element):
-    """Unwrap the divs that only hold this element, so callers that drop
-    every <div> of an article keep the embed"""
+    """Unwrap the divs and paragraphs that only hold this element: callers
+    that drop every <div> of an article keep the embed, and no <figure> or
+    link paragraph ends up inside a <p>, which browsers split into empty
+    paragraphs"""
     parent = element.parent
-    while parent is not None and parent.name == "div" and parent.get("id") != "article-content":
+    while parent is not None and parent.name in ("div", "p") and parent.get("id") != "article-content":
         siblings = [c for c in parent.contents if c is not element and str(c).strip()]
         if siblings:
             break
