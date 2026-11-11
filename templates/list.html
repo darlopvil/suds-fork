@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>{{ data[7] }} - Suds</title>
+	<title>{{ data[6] }} - Suds</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -10,7 +10,7 @@
 <body>
 	{% include "header.html" %}
 	<span>#</span>
-	{% for tag in data[6] %}
+	{% for tag in data[5] %}
 	<span><a href="{{ tag[0] }}">{{ tag[1] }}</a></span>
 	<span>&nbsp;&nbsp;</span>
 	{% endfor %}
@@ -29,11 +29,18 @@
 
 	{% endfor %}
 
-	<center>
-		{{ data[3]|safe }}
-		{{ data[4]|safe }}
-		<p><small>{{ data[5] }}</small></p>
-	</center>
+	{% if data[4] and data[4] > 1 %}
+	<nav class="pagination">
+		{% if data[3] > 1 %}<a href="?pagenum={{ data[3] - 1 }}">Previous</a>{% endif %}
+		<form method="get" action="{{ request.path }}">
+			<label for="pagenum">Page</label>
+			<input type="number" id="pagenum" name="pagenum" min="1" max="{{ data[4] }}" value="{{ data[3] }}" required>
+			<span>of {{ data[4] }}</span>
+			<button type="submit">Go</button>
+		</form>
+		{% if data[3] < data[4] %}<a href="?pagenum={{ data[3] + 1 }}">Next</a>{% endif %}
+	</nav>
+	{% endif %}
 	{% include "footer.html" %}
 </body>
 </html>

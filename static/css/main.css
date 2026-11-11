@@ -252,3 +252,16 @@ p.embed-link {
 #article-content .live_updates:target {
 	border-top-color: #51afef;
 }
+
+/* Page navigation of lists: Snopes' own page form, which needs no script */
+nav.pagination {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 1.5em;
+	margin: 1em 0;
+}
+
+nav.pagination input {
+	width: 5em;
+}

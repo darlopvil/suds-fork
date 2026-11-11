@@ -109,6 +109,15 @@ def proxy_image_links(article):
         if IMAGE_FILE.search(href):
             a["href"] = "/proxy/?url=" + href
 
+def pagination(soup):
+    """Current page and number of pages of a list, from Snopes' page form
+    (its value and max); (None, None) when the list has no pages"""
+    field = soup.select_one("form.pagenumber input[name=pagenum]")
+    value, total = (field.get("value", ""), field.get("max", "")) if field else ("", "")
+    if value.isdigit() and total.isdigit():
+        return int(value), int(total)
+    return None, None
+
 def secondary_list(path, params=None):
     data = fetch(SNOPES + "/" + path, params=params)
 
@@ -152,15 +161,9 @@ def secondary_list(path, params=None):
                 byline = text.find(attrs={"class": ["article_byline"]}).text
                 article_list.append([link, image, alt, title, author, date, byline])
 
-        # Next/previous buttons
-        prev_button = next_button = ''
-        if soup.select("#both-buttons") != []:
-            buttons = soup.select("#both-buttons")[0].select("a")
-            prev_button = buttons[0]
-            next_button = buttons[1]
-        pagenumber = soup.find(attrs={"class": ["pagenumber"]}).text
+        page, pages = pagination(soup)
 
-        return [article_type, description, article_list, prev_button, next_button, pagenumber, tags, head]
+        return [article_type, description, article_list, page, pages, tags, head]
 
     else:
         return data.status_code
@@ -206,13 +209,9 @@ def article_list(path, params=None):
                 byline = text.find(attrs={"class": ["article_byline"]}).text
                 article_list.append([link, image, alt, title, author, date, byline])
 
-        # Next/previous buttons
-        buttons = soup.select("#both-buttons")[0].select("a")
-        prev_button = buttons[0]
-        next_button = buttons[1]
-        pagenumber = soup.find(attrs={"class": ["pagenumber"]}).text
+        page, pages = pagination(soup)
 
-        return [article_type, description, article_list, prev_button, next_button, pagenumber, tags, head]
+        return [article_type, description, article_list, page, pages, tags, head]
 
     else:
         return data.status_code
