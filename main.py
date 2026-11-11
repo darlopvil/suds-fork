@@ -537,7 +537,12 @@ def route_collection(collection):
     replace_embeds(article)
     article_copy = copy(article)
 
-    for div in article.select("div"): div.decompose()
+    # The list of articles is rendered from the copy and the collection
+    # navigation is not content; other divs are (listicle items, alerts,
+    # image captions), as in news()
+    for div in article.select("div.article_wrapper, div.next_prev_wrapper, div.collections_number, "
+                              "div.snopesad, div.proper-ad-unit"): div.decompose()
+    for div in article.select("div"): del div["style"]
     for script in article.select("script"): script.decompose()
 
     remove_blank_paragraphs(article)
@@ -555,11 +560,12 @@ def route_collection(collection):
         image = "/proxy/?url=" + div.select("img")[0].get("data-src")
         alt = div.select("img")[0].get("alt")
         if len(list(div.select(".article_text"))) != 0:
+            # Own names: title and date are the collection's
             text = div.find(attrs={"class": ["article_text"]})
-            title = text.select("h3")[0].text
-            date = text.find(attrs={"class": ["article_date"]}).text
+            item_title = text.select("h3")[0].text
+            item_date = text.find(attrs={"class": ["article_date"]}).text
             byline = text.find(attrs={"class": ["article_byline"]}).text
-            article_list.append([link, image, alt, title, date, byline])
+            article_list.append([link, image, alt, item_title, item_date, byline])
 
 
     return render_template("collection.html", data=[article_type, title, subtitle, author_link, str(author).strip(), date, cover, cover_alt, cover_desc, article, author_bio, article_list])
