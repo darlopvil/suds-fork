@@ -32,6 +32,7 @@ from bs4 import BeautifulSoup
 from copy import copy
 from search_index import SearchIndex
 from embeds import replace_embeds, FRAMED_FRONTENDS
+from sanitize import sanitize
 
 def remove_all(tag, selector):
     """Remove every element matching selector; Snopes omits some of them"""
@@ -76,7 +77,7 @@ def rating_block(rating):
         return ''
     remove_all(rating, "svg")
     remove_all(rating, "img")
-    return str(rating).replace("https://www.snopes.com", '')
+    return str(sanitize(rating)).replace("https://www.snopes.com", '')
 
 search_index = SearchIndex()
 SEARCH_RESULTS_PER_PAGE = 20
@@ -140,6 +141,7 @@ def secondary_list(path, params=None):
         article_type = soup.find(attrs={"class": ["section_title"]})
         if (article_type.find("svg") != None):
             article_type.find("svg").decompose()
+        sanitize(article_type)
         head = article_type.find("span")
         if head != None:
             head = head.text
@@ -190,6 +192,7 @@ def article_list(path, params=None):
         # Header
         article_type = soup.find(attrs={"class": ["section_title"]})
         remove_all(article_type, "svg")
+        sanitize(article_type)
         head = article_type.find("span")
         if head != None:
             head = head.text
@@ -257,7 +260,7 @@ def news(path):
         soup = BeautifulSoup(data.text, "html.parser")
 
         # Header
-        article_type = soup.find(attrs={"class": ["section_title"]})
+        article_type = sanitize(soup.find(attrs={"class": ["section_title"]}))
         remove_all(article_type, "svg")
         title_container = soup.find(attrs={"class": ["title-container"]})
         title = title_container.select("h1")[0].text
@@ -283,9 +286,9 @@ def news(path):
         # Tracker details are unfolded with JavaScript: show them all
         for row in article.select("tr.hidden_row"): del row["style"]
         live_updates(article)
-        for field in article.select("input[type=hidden]"): field.decompose()
 
         remove_blank_paragraphs(article)
+        sanitize(article)
         proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
@@ -307,7 +310,7 @@ def fact_check(path):
         # Header
         article_type = soup.find(attrs={"class": ["section_title"]})
         remove_all(article_type, "svg")
-        article_type = article_type.text
+        article_type = escape(article_type.text)
         title_container = soup.find(attrs={"class": ["title-container"]})
         title = title_container.select("h1")[0].text
         subtitle = title_container.select("h2")[0].text
@@ -332,6 +335,7 @@ def fact_check(path):
             article.find("section").decompose()
 
         remove_blank_paragraphs(article)
+        sanitize(article)
         proxy_image_links(article)
         article = proxy_sources(str(article))
         article = article.replace("https://www.snopes.com", '')
@@ -573,7 +577,7 @@ def route_collection(collection):
     # Header
     article_type = soup.find(attrs={"class": ["section_title"]})
     remove_all(article_type, "svg")
-    article_type = article_type.text
+    article_type = escape(article_type.text)
     title_container = soup.find(attrs={"class": ["title-container"]})
     title = title_container.select("h1")[0].text
     subtitle = title_container.select("h2")[0].text
@@ -600,6 +604,7 @@ def route_collection(collection):
     for script in article.select("script"): script.decompose()
 
     remove_blank_paragraphs(article)
+    sanitize(article)
     proxy_image_links(article)
     article = proxy_sources(str(article))
 
@@ -682,10 +687,11 @@ def route_sitemap():
         archive_type = archive_box.find(attrs={"class": ["section_title"]})
         if (archive_type.find("svg") != None):
             archive_type.find("svg").decompose()
+        sanitize(archive_type)
         archive_sections = []
         for archive_section_item in archive_box.select(".archive_section_item"):
             archive_section_item.a["href"] = archive_section_item.a["href"].replace("https://www.snopes.com", '')
-            archive_sections.append(archive_section_item.a)
+            archive_sections.append(sanitize(archive_section_item.a))
         archives.append([archive_type, archive_sections])
 
     return render_template("sitemap.html", data=[title, archives])
