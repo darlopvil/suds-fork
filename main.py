@@ -18,6 +18,10 @@
 ## along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from flask import Flask, render_template, request, redirect, Response, stream_with_context, url_for
+from markupsafe import escape
+from werkzeug.middleware.proxy_fix import ProxyFix
+from datetime import datetime, timezone
+from email.utils import format_datetime
 from werkzeug.exceptions import HTTPException
 from werkzeug.routing import BaseConverter
 import requests
@@ -342,6 +346,8 @@ def fact_check(path):
         return data.status_code
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
+# Behind a reverse proxy that terminates TLS: feeds need absolute https links
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 # AGPL-3.0 section 13: users of a modified version running on a network must
 # be offered its source. Deployments of other forks point this to their own.
@@ -354,6 +360,43 @@ class SlugConverter(BaseConverter):
     regex = r"[A-Za-z0-9_-]+"
 
 app.url_map.converters["slug"] = SlugConverter
+
+# Dates in Snopes' lists: AP-style month abbreviations ("Sept. 9, 2026"),
+# sometimes followed by "(Updated: ...)"
+AP_MONTHS = {"Jan.": 1, "Feb.": 2, "March": 3, "April": 4, "May": 5, "June": 6,
+             "July": 7, "Aug.": 8, "Sept.": 9, "Oct.": 10, "Nov.": 11, "Dec.": 12}
+LIST_DATE = re.compile(r"(" + "|".join(re.escape(m) for m in AP_MONTHS) + r") (\d{1,2}), (\d{4})")
+
+def list_date(text):
+    """RFC 822 date of a list item's publication date, or None"""
+    match = LIST_DATE.search(text)
+    if not match:
+        return None
+    month, day, year = match.groups()
+    return format_datetime(datetime(int(year), AP_MONTHS[month], int(day), tzinfo=timezone.utc))
+
+# List items carry "Written by: <name>"; feeds keep only the name
+BYLINE_LABEL = re.compile(r"^\w+ by: *")
+
+def render_list(data):
+    """A list page, or its RSS feed when the path ends in /feed/. Feeds are
+    built from the list Suds shows, because Snopes' own feeds ignore most
+    lists (ratings, listicles, articles, classics and authors fall back to
+    another feed or come out empty)"""
+    if not request.path.endswith("/feed/"):
+        return render_template("list.html", data=data)
+    root = request.host_url.rstrip("/")
+    items = []
+    for link, image, alt, title, author, date, byline in data[2]:
+        picture = f'<img src="{escape(root + image)}" alt="{escape(alt or "")}">'
+        items.append({
+            "title": title.strip(), "link": root + link, "image": root + image,
+            "published": list_date(date), "author": BYLINE_LABEL.sub("", " ".join(author.split())),
+            "description": picture + f"<p>{escape(byline.strip())}</p>",
+        })
+    body = render_template("feed.xml", title=data[6].strip(), description=data[1].strip(),
+                           link=root + request.path[:-len("feed/")], items=items)
+    return Response(body, content_type="application/rss+xml; charset=utf-8")
 
 def page_param():
     """Forward ?pagenum= to Snopes only when it is a positive integer"""
@@ -379,18 +422,20 @@ def upstream_error(status):
     return error_page(404 if status == 404 else 502)
 
 @app.route('/fact-check/')
+@app.route('/fact-check/feed/')
 def route_fact_check_list():
     data = article_list("fact-check/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/category/<slug:category>/')
+@app.route('/category/<slug:category>/feed/')
 def route_category(category):
     data = secondary_list(f"category/{category}/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 # Snopes moved categories to /category/<name>/ and answers 404 on the old
 # per-section paths; keep old links working
@@ -400,54 +445,61 @@ def route_old_category(category):
     return redirect(url_for('route_category', category=category, **page_param()), 301)
 
 @app.route('/fact-check/rating/<slug:rating>/')
+@app.route('/fact-check/rating/<slug:rating>/feed/')
 def route_fact_check_rating(rating):
     data = secondary_list(f"fact-check/rating/{rating}/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/latest/')
+@app.route('/latest/feed/')
 def route_latest():
     data = article_list("latest/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/top/')
+@app.route('/top/feed/')
 def route_top():
     data = article_list("top/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/news/')
+@app.route('/news/feed/')
 def route_news_list():
     data = article_list("news/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 
 @app.route('/articles/')
+@app.route('/articles/feed/')
 def route_articles():
     data = article_list("articles/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/classics/')
+@app.route('/classics/feed/')
 def route_classics():
     data = article_list("classics/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/listicles/')
+@app.route('/listicles/feed/')
 def route_listicles():
     data = secondary_list("listicles/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/news/<slug:year>/<slug:month>/<slug:day>/<slug:article>/')
 def route_news(year, month, day, article):
@@ -487,25 +539,28 @@ def route_fact_check(article):
     return render_template("fact-check.html", data=data)
 
 @app.route('/author/<slug:author>/')
+@app.route('/author/<slug:author>/feed/')
 def route_author(author):
     data = secondary_list(f"author/{author}/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/tag/<slug:tag>/')
+@app.route('/tag/<slug:tag>/feed/')
 def route_tag(tag):
     data = secondary_list(f"tag/{tag}/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/collections/')
+@app.route('/collections/feed/')
 def route_collections():
     data = secondary_list("collections/", page_param())
     if type(data) == int:
         return upstream_error(data)
-    return render_template("list.html", data=data)
+    return render_list(data)
 
 @app.route('/collections/<slug:collection>/')
 def route_collection(collection):
