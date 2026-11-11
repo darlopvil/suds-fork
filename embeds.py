@@ -21,10 +21,9 @@ Snopes turns embeds into players with JavaScript, which Suds strips, so
 they rendered as empty boxes or bare quotes. Each embed is replaced before
 the article is serialised:
 
-- YouTube, tweets, TikTok and Reddit become an iframe to a self-hosted
-  privacy frontend (Invidious, Nitter, ProxiTok, eddrit).
-- Instagram and Facebook posts become a one-line link through Kittygram or
-  Phice, which have no compact embed view.
+- YouTube, tweets, TikTok, Reddit, Instagram and Facebook become an
+  iframe to a self-hosted privacy frontend (Invidious, Nitter, ProxiTok,
+  eddrit, Kittygram, Phice).
 - Anything else, or an embed whose frontend is not configured, becomes a
   labelled link to the original.
 
@@ -34,7 +33,7 @@ Only embeds are rewritten; links in the article text are left alone.
 
 import os
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 from bs4 import BeautifulSoup
 
@@ -53,7 +52,22 @@ KITTYGRAM = frontend_url("KITTYGRAM_URL")
 PHICE = frontend_url("PHICE_URL")
 
 # Iframes pointing here must not be routed through the image proxy
-FRAMED_FRONTENDS = tuple(u + "/" for u in (INVIDIOUS, NITTER, PROXITOK, EDDRIT) if u)
+FRAMED_FRONTENDS = tuple(
+    u + "/" for u in (INVIDIOUS, NITTER, PROXITOK, EDDRIT, KITTYGRAM, PHICE) if u)
+
+# Frame sizes. Phice fits a post to its frame, so Facebook frames keep the
+# size Snopes gives them; without one, posts get the median height of
+# Snopes' post iframes (653 px, 27 measured) and reels its size for reels
+# with text.
+FACEBOOK_POST = (500, 653)
+FACEBOOK_REEL = (267, 591)
+# Kittygram fits its embed to the frame: header and footer take 91 px, the
+# caption up to 35% and the media the rest. At 540 px wide, frames fit the
+# usual media (posts 4:5, the median of 6 measured; reels 9:16) plus the
+# median caption height (160 px, 12 measured); longer captions scroll.
+INSTAGRAM_WIDTH = 540
+INSTAGRAM_HEIGHT = {("p", False): 675 + 91, ("p", True): 675 + 91 + 160,
+                    ("reel", False): 960 + 91, ("reel", True): 960 + 91 + 160}
 
 YOUTUBE_ID = re.compile(r"youtube(?:-nocookie)?\.com/embed/([A-Za-z0-9_-]{6,})")
 TIKTOK_ID = re.compile(r"tiktok\.com/(?:embed/(?:v2/)?|@[^/]+/video/)([0-9]+)")
@@ -61,11 +75,6 @@ TWEET_ID = re.compile(r"(?:twitter|x)\.com/[^/]+/status/([0-9]+)")
 INSTAGRAM_POST = re.compile(r"instagram\.com/(p|reel|tv)/([A-Za-z0-9_-]+)")
 REDDIT_POST = re.compile(
     r"reddit\.com(/(?:r|user|u)/[^/]+/comments/[A-Za-z0-9]+)(?:/([^/?#]+))?")
-# Facebook paths Phice serves under the same path
-PHICE_PATH = re.compile(
-    r"^/(?:[^/]+/(?:posts|videos)/[^/]+(?:/[^/]+)?/?"
-    r"|reel/[^/]+/?|photo(?:\.php)?|permalink\.php|story\.php|watch"
-    r"|groups/[^/]+/(?:posts|permalink)/[^/]+/?)$")
 
 # Hit counters of syndicated articles: invisible images that only report
 # the visit to a third party
@@ -85,10 +94,13 @@ EMBED_SELECTOR = ", ".join([
 _factory = BeautifulSoup("", "html.parser")
 
 
-def _frame(kind, src):
+def _frame(kind, src, size=None):
     figure = _factory.new_tag("figure", attrs={"class": f"embed embed-{kind}"})
-    figure.append(_factory.new_tag("iframe", attrs={
-        "src": src, "loading": "lazy", "frameborder": "0", "allowfullscreen": ""}))
+    iframe = _factory.new_tag("iframe", attrs={
+        "src": src, "loading": "lazy", "frameborder": "0", "allowfullscreen": ""})
+    if size:
+        iframe["width"], iframe["height"] = (str(n) for n in size)
+    figure.append(iframe)
     return figure
 
 
@@ -122,24 +134,42 @@ def _tiktok(video_id):
     return _link("TikTok video", f"https://www.tiktok.com/embed/v2/{video_id}")
 
 
-def _instagram(kind, code):
-    base = KITTYGRAM or "https://www.instagram.com"
-    return _link("Instagram post", f"{base}/{kind}/{code}/")
+def _instagram(kind, code, captioned):
+    kind = "p" if kind == "tv" else kind  # Kittygram serves IGTV under /p/
+    if KITTYGRAM:
+        embed = "embed/captioned/" if captioned else "embed/"
+        size = (INSTAGRAM_WIDTH, INSTAGRAM_HEIGHT[(kind, captioned)])
+        return _frame("instagram", f"{KITTYGRAM}/{kind}/{code}/{embed}?theme=dark", size)
+    return _link("Instagram post", f"https://www.instagram.com/{kind}/{code}/")
+
+
+def _size(element, default):
+    """The frame size Snopes gave an iframe, or a default"""
+    width, height = element.get("width", ""), element.get("height", "")
+    return (int(width), int(height)) if width.isdigit() and height.isdigit() else default
+
+
+def _facebook_plugin(element, src):
+    """facebook.com/plugins/post.php or video.php: Phice serves the same
+    path and query"""
+    url = urlparse(src)
+    video = url.path.endswith("/video.php")
+    if PHICE:
+        size = _size(element, FACEBOOK_REEL if video else FACEBOOK_POST)
+        return _frame("facebook", f"{PHICE}{url.path}?{url.query}&theme=dark", size)
+    href = parse_qs(url.query).get("href", [""])[0]
+    return _facebook(href) if href else None
 
 
 def _facebook(href):
-    url = urlparse(href)
-    if not url.netloc.endswith("facebook.com"):
+    """A Facebook post URL (fb-post and fb-video divs)"""
+    if not urlparse(href).netloc.endswith("facebook.com"):
         return None
-    path = url.path
-    # Phice serves /photo and /watch without the trailing slash
-    if path in ("/photo/", "/watch/"):
-        path = path.rstrip("/")
-    if PHICE and PHICE_PATH.match(path):
-        # Query strings only carry ids for the .php, photo and watch routes
-        keep_query = path.endswith(".php") or path in ("/photo", "/watch")
-        target = PHICE + path + ("?" + url.query if keep_query and url.query else "")
-        return _link("Facebook post", target)
+    if PHICE:
+        reel = "/reel/" in href
+        plugin = "video.php" if reel else "post.php"
+        src = f"{PHICE}/plugins/{plugin}?href={quote(href, safe='')}&show_text=true&theme=dark"
+        return _frame("facebook", src, FACEBOOK_REEL if reel else FACEBOOK_POST)
     return _link("Facebook post", href)
 
 
@@ -152,11 +182,9 @@ def _iframe(element):
     if (match := TIKTOK_ID.search(src)):
         return _tiktok(match.group(1))
     if (match := INSTAGRAM_POST.search(src)):
-        return _instagram(match.group(1), match.group(2))
-    if "facebook.com/plugins/" in src:
-        href = parse_qs(urlparse(src).query).get("href", [""])[0]
-        if href and (link := _facebook(href)):
-            return link
+        return _instagram(match.group(1), match.group(2), "/captioned" in src)
+    if "facebook.com/plugins/" in src and (replacement := _facebook_plugin(element, src)):
+        return replacement
     return _link("Embedded content", src)
 
 
@@ -196,7 +224,8 @@ def _replacement(element):
     if "instagram-media" in classes or "instagram-media-lazy" in classes:
         permalink = element.get("data-instgrm-permalink") or " ".join(_links(element))
         if (match := INSTAGRAM_POST.search(permalink)):
-            return _instagram(match.group(1), match.group(2))
+            return _instagram(match.group(1), match.group(2),
+                              element.has_attr("data-instgrm-captioned"))
         return None
     if "tiktok-embed" in classes:
         video_id = element.get("data-video-id")
