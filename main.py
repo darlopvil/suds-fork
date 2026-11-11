@@ -653,6 +653,9 @@ PROXY_HEADERS = {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
     "X-Content-Type-Options": "nosniff",
 }
+# Kept from the upstream response, so browsers cache images as the origin
+# allows (Snopes' media: public, max-age of a year, Last-Modified)
+UPSTREAM_CACHE_HEADERS = ("Cache-Control", "Expires", "Last-Modified", "ETag")
 
 @app.route('/proxy/')
 def route_proxy():
@@ -684,7 +687,9 @@ def route_proxy():
     content_type = data.headers.get("Content-Type", "")
     if not content_type.startswith("image/"):
         return error_page(502)
-    return Response(data.content, content_type=content_type, headers=PROXY_HEADERS)
+    headers = dict(PROXY_HEADERS)
+    headers.update({name: data.headers[name] for name in UPSTREAM_CACHE_HEADERS if name in data.headers})
+    return Response(data.content, content_type=content_type, headers=headers)
 
 @app.before_request
 def add_slash():
