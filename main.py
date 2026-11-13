@@ -355,6 +355,12 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1)
 
 # AGPL-3.0 section 13: users of a modified version running on a network must
 # be offered its source. Deployments of other forks point this to their own.
+@app.context_processor
+def snopes_link():
+    """The same page on Snopes, for the footer: Suds mirrors Snopes' paths
+    and query strings, search included (/search/?q=)"""
+    return {"snopes_url": SNOPES + request.full_path.rstrip("?")}
+
 app.jinja_env.globals["source_url"] = os.environ.get("SUDS_SOURCE_URL", "https://github.com/darlopvil/suds-fork")
 
 class SlugConverter(BaseConverter):

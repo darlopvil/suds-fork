@@ -17,7 +17,7 @@
 	{% endfor %}
 	<p>{{ data[0]|safe }}</p>
 	<p><b>{{ data[1] }}</b></p>
-	<p><a href="{{ request.path }}feed/">RSS feed</a></p>
+	<p><a href="{{ request.path }}feed/">RSS feed</a> &middot; <a href="{{ snopes_url }}" rel="noreferrer">View on Snopes</a></p>
 	{% for article in data[2] %}
 	<a href="{{ article[0] }}"><img style="float:left;object-fit:cover;;padding-right:20px;padding-bottom:1em;" src="{{ article[1] }}" alt="{{ article[2] }}" width=325px height=325px></a>
 	<div style="display:flex;justify-content:left;align-items:left;flex-flow:column;">

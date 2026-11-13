@@ -12,7 +12,7 @@
 	<p>{{ data[0]|safe }}</p>
 	<h1>{{ data[1] }}</h1>
 	<p><b>{{ data[2] }}</b></p>
-	<p>by <a href="{{ data[3] }}">{{ data[4] }}</a>, {{ data[5] }}</p>
+	<p>by <a href="{{ data[3] }}">{{ data[4] }}</a>, {{ data[5] }} &middot; <a href="{{ snopes_url }}" rel="noreferrer">View on Snopes</a></p>
 	<br>
 	{% if data[6] %}
 	<img src="/proxy/?url={{ data[6] }}" alt="{{ data[7] }}">
