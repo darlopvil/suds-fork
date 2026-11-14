@@ -193,6 +193,10 @@ def secondary_list(path, params=None):
                 article_list.append([link, image, alt, title, author, date, byline])
 
         page, pages = pagination(soup)
+        # Snopes answers an unknown tag with 200 and an empty list page: no
+        # title and no articles
+        if not article_list and not head.strip():
+            return 404
 
         return [article_type, description, article_list, page, pages, tags, head]
 
@@ -242,6 +246,10 @@ def article_list(path, params=None):
                 article_list.append([link, image, alt, title, author, date, byline])
 
         page, pages = pagination(soup)
+        # Snopes answers an unknown tag with 200 and an empty list page: no
+        # title and no articles
+        if not article_list and not head.strip():
+            return 404
 
         return [article_type, description, article_list, page, pages, tags, head]
 
