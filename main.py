@@ -80,31 +80,6 @@ def gather_orphan_list_items(article):
         if holder is not item:
             holder.decompose()
 
-def gather_orphan_list_items(article):
-    """Legacy articles put only the first item of some lists inside the
-    <ul>; the rest come each in a <p> with no list around them, so they lose
-    the list's indentation. Move each such item into the list before it, or
-    into a new <ul> where there is none."""
-    for item in article.find_all("li"):
-        if getattr(item, "decomposed", False) or item.find_parent(["ul", "ol"]):
-            continue
-        holder = item.parent
-        # A <p> holding only this item (and line breaks) goes with it
-        if holder.name != "p" or holder.get_text().strip() != item.get_text().strip():
-            holder = item
-        before = holder.find_previous_sibling()
-        if before is not None and before.name == "p" and before.find_all(True, recursive=False) \
-                and before.find_all(True, recursive=False)[-1].name in ("ul", "ol"):
-            before = before.find_all(True, recursive=False)[-1]
-        if before is not None and before.name in ("ul", "ol"):
-            target = before
-        else:
-            target = BeautifulSoup("", "html.parser").new_tag("ul")
-            holder.insert_before(target)
-        target.append(item.extract())
-        if holder is not item:
-            holder.decompose()
-
 def cover_image(soup):
     """Cover image, alt text and caption; empty when Snopes only shows its
     generic placeholder (default_thumb), which says nothing about the article"""
@@ -331,6 +306,9 @@ def news(path):
         # Only ad slots go: other divs hold content (listicle items, tracker
         # tables, quotes, notes), about 106,000 words in 182 sampled pages
         for div in article.select("div.snopesad, div.proper-ad-unit"): div.decompose()
+        # Collection navigation ("Article 1 of 8 in Collection", previous and
+        # next article) is not part of the article
+        remove_all(article, "div.next_prev_wrapper, div.collections_number")
         for div in article.select("div"): del div["style"]
         for script in article.select("script"): script.decompose()
         # Tracker details are unfolded with JavaScript: show them all
@@ -338,7 +316,6 @@ def news(path):
         live_updates(article)
 
         remove_blank_paragraphs(article)
-        gather_orphan_list_items(article)
         gather_orphan_list_items(article)
         sanitize(article)
         proxy_image_links(article)
@@ -381,13 +358,15 @@ def fact_check(path):
         rating = copy(article.find(attrs={"id": ["fact_check_rating_container"]}))
         
         for div in article.select("div.snopesad"): div.decompose()
+        # Collection navigation ("Article 1 of 8 in Collection", previous and
+        # next article) is not part of the article
+        remove_all(article, "div.next_prev_wrapper, div.collections_number")
         for div in article.select("div"): del div["style"]
         for script in article.select("script"): script.decompose()
         if article.find("section") != None:
             article.find("section").decompose()
 
         remove_blank_paragraphs(article)
-        gather_orphan_list_items(article)
         gather_orphan_list_items(article)
         sanitize(article)
         proxy_image_links(article)
@@ -663,7 +642,6 @@ def route_collection(collection):
     for script in article.select("script"): script.decompose()
 
     remove_blank_paragraphs(article)
-    gather_orphan_list_items(article)
     gather_orphan_list_items(article)
     sanitize(article)
     proxy_image_links(article)
