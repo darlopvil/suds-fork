@@ -96,12 +96,12 @@ Feeds need absolute links, so Suds builds them from the request it receives. Beh
 | --- | --- | --- |
 | `SUDS_SOURCE_URL` | this repository | Where the "Source code" link in the footer points. If you run a modified copy, the AGPL requires you to offer its source to your users, so point this at it. |
 | `SUDS_DATA_DIR` | `data/` next to the code (`/data` in Docker) | Where the search index is stored. It must be writable. |
-| `INVIDIOUS_URL` | unset | Invidious instance for YouTube embeds. |
-| `NITTER_URL` | unset | Nitter instance for tweets. |
-| `PROXITOK_URL` | unset | ProxiTok instance for TikToks. |
-| `EDDRIT_URL` | unset | eddrit instance for Reddit posts. |
-| `KITTYGRAM_URL` | unset | Kittygram instance for Instagram posts. |
-| `PHICE_URL` | unset | Phice instance for Facebook posts. |
+| `INVIDIOUS_URL` | unset | [Invidious](https://github.com/iv-org/invidious) instance for YouTube embeds. |
+| `NITTER_URL` | unset | [Nitter](https://github.com/zedeus/nitter) instance for tweets. |
+| `PROXITOK_URL` | unset | [ProxiTok](https://github.com/darlopvil/ProxiTok) instance for TikToks. |
+| `EDDRIT_URL` | unset | [eddrit](https://github.com/darlopvil/eddrit-fork) instance for Reddit posts. |
+| `KITTYGRAM_URL` | unset | [Kittygram](https://github.com/darlopvil/kittygram-fork) instance for Instagram posts; embeds need the embed view of this fork. |
+| `PHICE_URL` | unset | [Phice](https://github.com/darlopvil/phice-fork) instance for Facebook posts; embeds need the embed view of this fork. |
 
 ## License
 
