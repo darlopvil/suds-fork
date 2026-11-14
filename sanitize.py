@@ -37,7 +37,7 @@ from embeds import FRAMED_FRONTENDS
 ALLOWED_TAGS = {
     "a", "abbr", "b", "blockquote", "br", "caption", "cite", "code", "col",
     "colgroup", "dd", "del", "div", "dl", "dt", "em", "figcaption", "figure",
-    "font", "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "iframe", "img", "ins",
+    "h1", "h2", "h3", "h4", "h5", "h6", "hr", "i", "iframe", "img", "ins",
     "li", "mark", "ol", "p", "path", "pre", "q", "s", "section", "small", "span",
     "strong", "sub", "sup", "svg", "table", "tbody", "td", "tfoot", "th", "thead",
     "time", "tr", "u", "ul",
@@ -60,9 +60,6 @@ TAG_ATTRIBUTES = {
     "ol": {"start", "type", "reversed"},
     "li": {"value"},
     "time": {"datetime"},
-    "font": {"color"},
-    # Legacy quote boxes; the stylesheet styles table[bgcolor]
-    "table": {"bgcolor"},
     "svg": {"viewbox", "xmlns", "role", "aria-hidden", "width", "height"},
     "path": {"d", "fill"},
 }
@@ -127,6 +124,16 @@ def sanitize(element):
         comment.extract()
     for tag in element.find_all(True):
         if tag.decomposed:  # inside a tag removed earlier
+            continue
+        if tag.name == "table" and tag.has_attr("bgcolor"):
+            # Legacy quote boxes: a class instead of the obsolete attribute
+            del tag["bgcolor"]
+            tag["class"] = (tag.get("class") or []) + ["quote-box"]
+        if tag.name == "font":
+            color = tag.get("color", "")
+            tag.name, tag.attrs = "span", {}
+            if color and STYLE_VALUE.match(color):
+                tag["style"] = f"color: {color}"
             continue
         if tag.name in DROPPED_TAGS:
             tag.decompose()

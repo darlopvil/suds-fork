@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<title>{% if query %}{{ query }} - {% endif %}Search - Suds</title>
 	<meta charset="UTF-8">
@@ -30,11 +30,11 @@
 	<hr>
 	{% endfor %}
 	{% if pages > 1 %}
-	<center>
+	<nav class="pagination">
 		{% if page > 1 %}<a href="{{ url_for('route_search', q=query, pagenum=page - 1) }}">Previous</a>{% endif %}
 		<small>Page {{ page }} of {{ pages }}</small>
 		{% if page < pages %}<a href="{{ url_for('route_search', q=query, pagenum=page + 1) }}">Next</a>{% endif %}
-	</center>
+	</nav>
 	{% endif %}
 	{% endif %}
 	{% include "footer.html" %}

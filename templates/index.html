@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<title>Suds</title>
 	<meta charset="UTF-8">
@@ -9,13 +9,13 @@
 </head>
 <body>
 	{% include "header.html" %}
-	<center>
-		<img src="{{ url_for('static', filename='img/logo.png') }}" height=400px>
-		<form style="align:right" action="/search/" method="get">
-			<input type=text" name="q" placeholder="Search Suds" size=50 style="font-size:18pt">
+	<div class="home">
+		<img src="{{ url_for('static', filename='img/logo.png') }}" alt="Suds" height="400">
+		<form action="/search/" method="get">
+			<input type="text" name="q" placeholder="Search Suds" aria-label="Search Suds" size="50" style="font-size:18pt">
 			<input type="submit" value="Go" style="font-size:18pt">
 		</form>
-	</center>
+	</div>
 	{% include "footer.html" %}
 </body>
 </html>

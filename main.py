@@ -2,9 +2,9 @@
 
 ## Copyright (C) 2023-2025 Skylar Astaroth <cobra@vern.cc>
 ##
-## This file is part of MeMe
+## This file is part of Suds.
 ##
-## MeMe is free software: you can redistribute it and/or modify it under the
+## Suds is free software: you can redistribute it and/or modify it under the
 ## terms of the GNU Affero General Public License as published by the Free
 ## Software Foundation, either version 3 of the License, or (at your option) any
 ## later version.
@@ -629,7 +629,6 @@ def route_collections():
 @app.route('/collections/<slug:collection>/')
 def route_collection(collection):
     data = fetch(f"{SNOPES}/collections/{collection}/")
-    print(data)
     if data.status_code != 200:
         return upstream_error(data.status_code)
     soup = BeautifulSoup(data.text, "html.parser")

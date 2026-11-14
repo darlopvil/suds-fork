@@ -71,7 +71,7 @@ blockquote {
 }
 
 .about_this_rating {
-	font-weight:thin;
+	font-weight:lighter;
 	font-size:0.7em;
 	display:inline;
 }
@@ -106,7 +106,6 @@ ul.archives {
 	list-style-type:none;
 	line-height:3em;
 	text-align:center;
-	align:center;
 }
 
 ul.archives li {
@@ -156,12 +155,8 @@ p.embed-link {
 /* Legacy articles (2002-era markup), neutralised as Snopes' own stylesheet
    does: <font> keeps its colour but not its size or face, and black
    quote tables look like the rest of the quotes */
-#article-content font {
-	font-size: inherit;
-	font-family: inherit;
-}
 
-#article-content table[bgcolor] {
+#article-content table.quote-box {
 	background: none;
 	border-left: 10px solid #969ba6;
 	padding-left: 10px;
@@ -264,4 +259,9 @@ nav.pagination {
 
 nav.pagination input {
 	width: 5em;
+}
+
+/* Centred blocks that used <center> */
+.home, .error-page, footer {
+	text-align: center;
 }

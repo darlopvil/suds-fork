@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-	<title>{{ data[6] }} - Suds</title>
+	<title>{{ data[6]|trim }} - Suds</title>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
@@ -19,11 +19,11 @@
 	<p><b>{{ data[1] }}</b></p>
 	<p><a href="{{ request.path }}feed/">RSS feed</a> &middot; <a href="{{ snopes_url }}" rel="noreferrer">View on Snopes</a></p>
 	{% for article in data[2] %}
-	<a href="{{ article[0] }}"><img style="float:left;object-fit:cover;;padding-right:20px;padding-bottom:1em;" src="{{ article[1] }}" alt="{{ article[2] }}" width=325px height=325px></a>
-	<div style="display:flex;justify-content:left;align-items:left;flex-flow:column;">
+	<a href="{{ article[0] }}"><img style="float:left;object-fit:cover;padding-right:20px;padding-bottom:1em;" src="{{ article[1] }}" alt="{{ article[2] }}" width="325" height="325"></a>
+	<div style="display:flex;justify-content:left;align-items:flex-start;flex-flow:column;">
 		<a href="{{ article[0] }}"><h3>{{ article[3] }}</h3></a>
 		<p><b>{{ article[4] }}</b></p>
-		<p style="font-size:0.7em;font-weight:thin;">{{ article[5] }}</p>
+		<p style="font-size:0.7em;font-weight:lighter;">{{ article[5] }}</p>
 		<p>{{ article[6] }}</p>
 		<p><a href="{{ article[0] }}">Read More</a></p>
 	</div>
