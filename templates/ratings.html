@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>{{ title }} - Suds</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+	<link rel="icon" type="image/png" href="{{ url_for('static', filename='img/favicon.png') }}">
+</head>
+<body>
+	{% include "header.html" %}
+	<h1>{{ title }}</h1>
+	<p><a href="{{ snopes_url }}" rel="noreferrer">View on Snopes</a></p>
+	<div id="article-content">
+		{% for paragraph in intro %}{{ paragraph|safe }}{% endfor %}
+		{% for rating in ratings %}
+		<section class="rating_definition" id="{{ rating.id }}">
+			{% if rating.icon %}<img src="{{ rating.icon }}" alt="" width="64" height="64">{% endif %}
+			<div>
+				<h2><a href="{{ rating.archive }}">{{ rating.name }}</a></h2>
+				{{ rating.description|safe }}
+			</div>
+		</section>
+		{% endfor %}
+	</div>
+	{% include "footer.html" %}
+</body>
+</html>

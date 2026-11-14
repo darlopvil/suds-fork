@@ -265,3 +265,28 @@ nav.pagination input {
 .home, .error-page, footer {
 	text-align: center;
 }
+
+/* Fact check ratings: icon next to each definition */
+section.rating_definition {
+	display: flex;
+	gap: 1em;
+	align-items: flex-start;
+	margin: 1.5em 0;
+}
+
+section.rating_definition img {
+	flex: 0 0 64px;
+}
+
+section.rating_definition div {
+	flex: 1;
+}
+
+section.rating_definition h2 {
+	margin: 0 0 0.3em;
+	font-size: 1.2em;
+}
+
+section.rating_definition:target h2 a {
+	text-decoration: underline;
+}

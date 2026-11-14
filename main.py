@@ -102,6 +102,21 @@ def rating_block(rating):
         return ''
     remove_all(rating, "svg")
     remove_all(rating, "img")
+    # The whole card links to the archive of fact-checks with that rating;
+    # only "About this rating" links, to the explanation of the rating
+    link = rating.select_one("a.rating_link_wrapper")
+    if link is not None:
+        slug = link.get("href", "").rstrip("/").rsplit("/", 1)[-1]
+        about = link.select_one(".about_this_rating")
+        link.unwrap()
+        if about is not None:
+            label = about.get_text(" ", strip=True) or "About this rating"
+            about.clear()
+            factory = BeautifulSoup("", "html.parser")
+            paragraph, anchor = factory.new_tag("p"), factory.new_tag("a", href=f"/fact-check-ratings/#{slug}")
+            anchor.string = label
+            paragraph.append(anchor)
+            about.append(paragraph)
     return str(sanitize(rating)).replace("https://www.snopes.com", '')
 
 search_index = SearchIndex()
@@ -720,6 +735,37 @@ def route_random():
     if data.status_code not in (301, 302, 303, 307, 308) or not location.startswith("/") or location.startswith("//"):
         return upstream_error(data.status_code)
     return redirect(location, 307)
+
+@app.route('/fact-check-ratings/')
+def route_fact_check_ratings():
+    """Snopes' page explaining each rating; every rating gets an anchor
+    (#false, #miscaptioned...) for the "About this rating" links"""
+    data = fetch(SNOPES + "/fact-check-ratings/")
+    if data.status_code != 200:
+        return upstream_error(data.status_code)
+    soup = BeautifulSoup(data.text, "html.parser")
+    content = soup.select_one("#tab_content")
+    if content is None:
+        return error_page(502)
+    title = content.select_one("h1")
+    intro = [proxy_sources(str(sanitize(p))) for p in content.select(".page_info > p")]
+    ratings = []
+    for link in content.select("a.outer_rating_link"):
+        slug = link.get("href", "").rstrip("/").rsplit("/", 1)[-1]
+        spans = link.select(".rating_info_wrap > span")
+        if not slug or not spans:
+            continue
+        icon = link.select_one("img")
+        ratings.append({
+            # Retired ratings end in _retired; fact-checks name them without it
+            "id": slug.removesuffix("_retired"),
+            "archive": f"/fact-check/rating/{slug}/",
+            "name": spans[0].get_text(strip=True),
+            "description": proxy_sources(str(sanitize(spans[1]))) if len(spans) > 1 else "",
+            "icon": "/proxy/?url=" + icon["src"] if icon is not None and icon.get("src") else "",
+        })
+    return render_template("ratings.html", title=title.get_text(strip=True) if title else "Fact Check Ratings",
+                           intro=intro, ratings=ratings)
 
 @app.route('/sitemap/')
 def route_sitemap():
